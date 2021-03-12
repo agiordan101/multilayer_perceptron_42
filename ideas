@@ -1,0 +1,3 @@
+Idées:
+
+Graph des loss / accuracy pendant l'apprentissage de 2 models (Avec les meme poids de depart) utilisant pour l'un GD et l'autre SGD
