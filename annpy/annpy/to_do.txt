@@ -1,0 +1,11 @@
+
+To do:
+
+	- regularizer
+	- EarlyStopping save weights
+	- Dropout layer
+	- Move shuffle_datasets() + train_val_split() inside parsing.parse
+	- raise Exception(...)   ->  raise annpy_error(...).
+		To print annpy's error string (+others default data) before Exception string
+		OR
+		Create my own Execption object ?

@@ -15,6 +15,7 @@ import numpy as np
 
 loss = "BinaryCrossEntropy"
 monitored_loss = f'val_{loss}'
+metrics = ["RangeAccuracy"]
 
 def parsing(dataset_path, seeds_path=None):
 
@@ -36,10 +37,10 @@ def parsing(dataset_path, seeds_path=None):
 
 				# print(f"line {type(line)}: {line}")
 				line = json.loads(line)
-				if line.get(monitored_loss, None) < best_loss_file:
-					best_loss_file = line.get(monitored_loss, None)
-					seed = line.get('seed', None)
-					tts_seed = line.get('tts_seed', None)
+				if line.get(monitored_loss) < best_loss_file:
+					best_loss_file = line.get(monitored_loss)
+					seed = line.get('seed')
+					tts_seed = line.get('tts_seed')
 
 			print(f"End parsing, seed: {bool(seed)}, tts_seed: {bool(tts_seed)}\n")
 
@@ -73,27 +74,30 @@ def get_model(model_shp, seed=None, tts_seed=None, optimizer='Adam', optimizer_k
 		loss=loss,
 		optimizer=optimizer,
 		optimizer_kwargs=optimizer_kwargs,
-		metrics=["RangeAccuracy"]
+		metrics=metrics
 	)
 	return model
 
 def get_model_train(model_shp, features, targets, seed=None, tts_seed=None, optimizer='Adam', optimizer_kwargs={}):
 
+	# model = get_model(model_shp, None, tts_seed, optimizer, optimizer_kwargs)
 	model = get_model(model_shp, seed, tts_seed, optimizer, optimizer_kwargs)
 
+	# model.deepsummary()
+	# return
 	early_stopping = None
 	early_stopping = annpy.callbacks.EarlyStopping(
 		model=model,
 		# monitor="val_RangeAccuracy",
 		monitor=monitored_loss,
-		patience=15,
+		patience=200,
 	)
 
 	logs = model.fit(
 		features,
 		targets,
-		epochs=100,
-		batch_size=32,
+		epochs=500,
+		batch_size=128,
 		callbacks=[early_stopping] if early_stopping else [],
 		val_percent=0.2,
 		verbose=False,
@@ -101,70 +105,77 @@ def get_model_train(model_shp, features, targets, seed=None, tts_seed=None, opti
 	)
 
 	end_fit_logs = {key: mem[-1] for key, mem in logs.items()}
-	print(f"End fit result: {end_fit_logs}")
+	print(f"\nEnd fit {optimizer} result: {end_fit_logs}")
 
 	if early_stopping:
 		best_logs = early_stopping.get_best_metrics()
-		print(f"End fit, best : {best_logs}")
+		print(f"End fit {optimizer}, best : {best_logs}")
 	else:
 		best_logs = None
 
-
+	# model.deepsummary()
+	# print(f"models weights: {model}")
 	return model, logs, best_logs
 
 def	benchmark(model_shp, data):
 
 	models = [
-		('Adam', get_model_train(model_shp, *data, optimizer='Adam')[1][monitored_loss]),
-		('SGD', get_model_train(model_shp, *data, optimizer='SGD')[1][monitored_loss]),
-		('SGD_momentum', get_model_train(model_shp, *data, optimizer='SGD', optimizer_kwargs={'momentum': 0.98})[1][monitored_loss]),
-		('RMSProp', get_model_train(model_shp, *data, optimizer='RMSProp')[1][monitored_loss]),
+		('SGD', get_model_train(model_shp, *data, optimizer='SGD')),
+		('RMSProp', get_model_train(model_shp, *data, optimizer='RMSProp')),
+		('RMSProp_momentum', get_model_train(model_shp, *data, optimizer='RMSProp', optimizer_kwargs={'momentum': 0.986})),
+		('Adam', get_model_train(model_shp, *data, optimizer='Adam')),
 	]
 
-	max_epoch = max(len(mem) for metric, mem in models)
+	max_epoch = max(len(logs[1][monitored_loss]) for metric, logs in models)
 	x_axis = np.array(list(range(max_epoch)))
 	subject_goal_line = [0.08] * max_epoch
 
-	fig, axs = plt.subplots(2, 2)
-	fig.suptitle('Metrics based on Optimizers')
-
+	plt.plot(x_axis, subject_goal_line)
 	for i, model in enumerate(models):
 		metric, mem = model
-		axs[i//2, i%2].set_title(metric)
-		axs[i//2, i%2].plot(x_axis, subject_goal_line)
-		axs[i//2, i%2].plot(x_axis, mem + [mem[-1]] * (max_epoch - len(mem)))
-		axs[i//2, i%2].set_xlim([0, max_epoch])
-		axs[i//2, i%2].set_ylim([0, 1])
+		# print(type(mem[1]), type(mem[1]))
+		# plt.plot(x_axis[:len(mem[1][loss])], mem[1][loss], label=metric)
+		plt.plot(x_axis[:len(mem[1][monitored_loss])], mem[1][monitored_loss], label=metric)
 
-	# fig.legend()
-	plt.xlim(0, max_epoch)
-	plt.ylim(0, 1)
+	plt.title('Metrics based on Optimizers')
+	plt.xlabel('Epochs')
+	plt.ylabel('Losses')
+	plt.legend()
 	plt.show()
-	print(f"END")
 
 parser = argparse.ArgumentParser(description='Multilayer-Perceptron')
 parser.add_argument('-dataset', required=True, dest='dataset_path')
 parser.add_argument('-seeds', dest='seeds_path', default=None)
 
 parser.add_argument('--benchmark', dest='benchmark', action='store_true', default=False)
+parser.add_argument('--train', dest='train', action='store_true', default=False)
+parser.add_argument('--test', dest='test', default=False)
 
 args = vars(parser.parse_args())
-
-print(args['dataset_path'], args['seeds_path'], args['benchmark'])
 
 
 # Parsing
 input_shape, data = parsing(args['dataset_path'], args['seeds_path'])
-# features, targets, input_shape, seed, tts_seed = parsing(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 
 model_shp = (input_shape, 64, 32, 2)
-# model_shp = (input_shape, 64, 32, 2)
 
 if args['benchmark']:
+	print(f"Optimizers benchmark")
+
 	benchmark(model_shp, data)
 
-else:
-	# MLP
-	model, logs, best_logs = get_model_train(model_shp, *data)
-	# model, logs = get_model_train(model_shp, seed, tts_seed)
 
+if args['train']:
+	print(f"Train new MLP & save weights")
+
+	model, logs, best_logs = get_model_train(model_shp, *data)
+	model.save_weights(folder_path="./ressources", file_name="mlp_adam_train")
+
+
+if args['test']:
+	print(f"Load and test model")
+
+	model = annpy.models.SequentialModel.load_model(args['test'])
+	model.compile_metrics(loss, metrics)
+	logs = model.evaluate(data[0], data[1], return_stats=True)
+	print(f"Model loaded: {logs}")

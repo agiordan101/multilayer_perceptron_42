@@ -1,1 +1,3 @@
-# multilayer_perceptron_42
+# multilayer_perceptron
+
+Author: agiordan
