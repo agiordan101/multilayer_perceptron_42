@@ -5,7 +5,7 @@ import numpy as np
 
 loss = "BinaryCrossEntropy"
 monitored_loss = f'val_{loss}'
-n_seed_search = 1
+n_seed_search = 20
 
 def parsing(dataset_path, seeds_path=None):
 
@@ -47,15 +47,13 @@ def get_model(input_shape, seed=None):
 		seed=seed,
 		tts_seed=tts_seed
 	)
-	# model = annpy.models.sequential(input_shape=input_shape, name="First model")
 
 	model.add(annpy.layers.FullyConnected(
 		layers_shp[1],
-		activation="relu",
+		activation="ReLU",
 	))
 	model.add(annpy.layers.FullyConnected(
 		layers_shp[2],
-		# activation="relu",
 		activation="tanh",
 	))
 	model.add(annpy.layers.FullyConnected(
@@ -65,17 +63,7 @@ def get_model(input_shape, seed=None):
 	))
 	model.compile(
 		loss=loss,
-		# loss="MSE",
-		# optimizer="SGD",
-		optimizer="Adam",
-		# optimizer=annpy.optimizers.Adam(
-		# 	lr=0.001
-		# ),
-		# optimizer=annpy.optimizers.SGD(
-		# 	lr=0.2,
-		# 	momentum=0.92,
-		# ),
-		# metrics=["RangeAccuracy"]
+		optimizer="Adam"
 	)
 	return model
 
@@ -92,7 +80,7 @@ def get_model_train(input_shape, seed=None, graph=False):
 	logs = model.fit(
 		features,
 		targets,
-		epochs=500,
+		epochs=200,
 		batch_size=32,
 		callbacks=[early_stopping],
 		verbose=False,
@@ -105,7 +93,6 @@ def get_model_train(input_shape, seed=None, graph=False):
 	return model, logs
 
 def estimate_seed(input_shape, seed, iter=3):
-	# return sum(get_model_train(input_shape, seed)[1][monitored_loss] for i in range(iter)) / iter
 	losses = 0
 	for i in range(iter):
 		print(f"Train {i+1}/{iter} ...")
@@ -122,7 +109,8 @@ else:
 features, targets, input_shape, tts_seed = parsing(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 layers_shp = (input_shape, 64, 32, 2)
 
-tts_seed = np.random.get_state()
+tts_seed = np.random.get_state() ####
+
 # Model search
 best_model = None
 best_loss = 42

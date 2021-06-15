@@ -124,20 +124,6 @@ features, targets, input_shape, seed = parsing(sys.argv[1], sys.argv[2] if len(s
 
 layers_shp = (input_shape, 64, 32, 2)
 
-# mode = get_model(input_shape, seed)
-# mode2 = get_model(input_shape, seed)
-
-# mode.deepsummary()
-# mode2.deepsummary()
-# np.random.seed(42)
-# print(np.random.get_state())
-# np.random.seed(101)
-# print(np.random.get_state())
-# i=42
-# np.random.seed(i)
-# print(np.random.get_state())
-# exit(0)
-
 best_tts_seed = None
 best_loss = 1
 for i in range(n_seed_search):
