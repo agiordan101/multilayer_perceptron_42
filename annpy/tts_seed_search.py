@@ -38,7 +38,7 @@ def parsing(dataset_path, seeds_path=None):
 
 	return features, targets, features[0].shape[0], seed
 
-def get_model(input_shape, seed=None, tts_seed=None):
+def get_model(input_shape, tts_seed=None):
 
 	model = annpy.models.SequentialModel(
 		input_shape=layers_shp[0],
@@ -78,9 +78,9 @@ def get_model(input_shape, seed=None, tts_seed=None):
 	)
 	return model
 
-def get_model_train(input_shape, seed=None, tts_seed=None, graph=False):
+def get_model_train(input_shape, tts_seed=None, graph=False):
 
-	model = get_model(input_shape, seed, tts_seed)
+	model = get_model(input_shape, tts_seed)
 
 	early_stopping = annpy.callbacks.EarlyStopping(
 		model=model,
@@ -103,13 +103,11 @@ def get_model_train(input_shape, seed=None, tts_seed=None, graph=False):
 	print(f"Fit best  : {logs}")
 	return model, logs
 
-
-def estimate_tts_seed(input_shape, seed, tts_seed, iter=5):
-	# return sum(get_model_train(input_shape, seed)[1][monitored_loss] for i in range(iter)) / iter
+def estimate_tts_seed(input_shape, tts_seed, iter=3):
 	losses = 0
 	for i in range(iter):
 		print(f"\nTrain {i+1}/{iter} ...")
-		losses += get_model_train(input_shape, seed, tts_seed)[1][monitored_loss]
+		losses += get_model_train(input_shape, tts_seed)[1][monitored_loss]
 	return losses / iter
 
 
@@ -130,7 +128,7 @@ for i in range(n_seed_search):
 
 	tts_seed = int(np.random.randn()) % 1000000
 	np.random.seed(tts_seed)
-	loss_ = estimate_tts_seed(input_shape, seed, np.random.get_state())
+	loss_ = estimate_tts_seed(input_shape, np.random.get_state())
 
 	if loss_ < best_loss:
 		best_loss = loss_

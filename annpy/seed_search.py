@@ -1,7 +1,7 @@
 import sys
 import json
 import annpy
-import numpy as np
+# import numpy as np
 
 loss = "BinaryCrossEntropy"
 monitored_loss = f'val_{loss}'
@@ -109,7 +109,7 @@ else:
 features, targets, input_shape, tts_seed = parsing(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
 layers_shp = (input_shape, 64, 32, 2)
 
-tts_seed = np.random.get_state() ####
+# tts_seed = np.random.get_state() ####
 
 # Model search
 best_model = None
@@ -149,7 +149,6 @@ if best_loss < best_loss_file:
 			'seed': seed,
 			'tts_seed': tts_seed,
 		}
-		print(f"seed == tts_seed -> {seed == tts_seed}")
 		print(f"Write best loss in file")
 		json.dump(seed_dict, f)
 		print('\n', file=f)
