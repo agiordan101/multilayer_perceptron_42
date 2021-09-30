@@ -207,9 +207,13 @@ class SequentialModel():
 		}
 
 	def forward(self, inputs):
-		for layer in self.sequence:
-			inputs = layer.forward(inputs)
-		return inputs
+		try:
+			for layer in self.sequence:
+				inputs = layer.forward(inputs)
+			return inputs
+		except Exception as error:
+			print(f"[annpy error] SequentialModel.forward(): Error in this model structure ?\n{error}")
+			exit(0)
 
 	def evaluate(self, features, target, metrics_on=True, return_stats=False, only_val=True):
 		# def evaluate(self, model, features, target, metrics_on=True, return_stats=False):
@@ -502,38 +506,39 @@ class SequentialModel():
 			with open(file_path, 'r') as f:
 				data = json.loads(f.read())
 
-				if data.get('file_type') != "Only weights":
+				if data['file_type'] != "Only weights":
 					raise Exception(f"[annpy error] load_model: Wrong <file_type> for file {file_path}")
 
-				data = data.get('model')
+				data = data['model']
 
-				# print(f"Object __name__: >{type(model.get('type'))}< =?= >{type(obj.__name__)}<")
-				# print(f"Object __name__: >{model.get('type')}< =?= >{obj.__name__}<")
-				# print(f"MODEL FILE DATA:\n{model}")
-
-				if data.get('type') != obj.__name__:
+				if data['type'] != obj.__name__:
 					raise Exception(f"[annpy error] SequentialModel.load_model(): Wrong model type in {file_path} for this classmethod")
 
 				model = SequentialModel(
-					input_shape=data.get('input_shape'),
-					name=data.get('name')
+					input_shape=data['input_shape'],
+					name=data['name']
 				)
 
-				for layer in data.get('layers', []):
+				for layer in data['layers']:
+
 					model.add(annpy.parsing.parse.parse_object(
-						layer.get('type'),
+						layer['type'],
 						Layer,
-						output_shape=layer.get('units'),
-						activation=layer.get('activation'),
-						kernel=layer.get('kernel'),
-						bias=layer.get('bias'),
-						name=layer.get('name')
+						output_shape=layer['units'],
+						activation=layer['activation'],
+						kernel=layer['kernel'],
+						bias=layer['bias'],
+						name=layer['name']
 					))
 				
 				print(f"Successfully load model at '{file_path}'")
 
 		except FileNotFoundError:
 			print(f"[annpy error] SequentialModel.load_model(): File not found at '{file_path}'")
+			exit(1)
+
+		except Exception as error:
+			print(f"[annpy error] SequentialModel.load_model(): Error in model file structure ({file_path}):\n{error}")
 			exit(1)
 
 		return model
